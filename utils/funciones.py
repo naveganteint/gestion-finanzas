@@ -7,31 +7,49 @@ def tabla_filtro(df_datos, anio_seleccionado, companias):
  
 
 
-    df = df.drop(columns=["F.Valor", "Disponible","Observaciones","Movimiento"])
-  
-    df["MES"] = df["MES"].round(0).astype(int)
-    #df["Importe"] = df["Importe"].round(2).astype(float)
 
 
 
-    # 📅 filtrar por año
+
+
+
+
+
+    # 🧹 limpiar columnas innecesarias
+    df = df.drop(columns=["F.Valor", "Disponible", "Observaciones", "Movimiento"])
+
+    # 🔧 MES seguro
+    df["MES"] = pd.to_numeric(df["MES"], errors="coerce")
+    df["MES"] = df["MES"].round(0).astype("Int64")
+
+    # 🔧 AÑO seguro
     df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce").astype("Int64")
     anio_seleccionado = int(anio_seleccionado)
     df = df[df["AÑO"] == anio_seleccionado]
 
-   
-
-    # 🧠 filtrar por GRUPO
+    # 🔧 FILTRO GRUPO (TE FALTABA AQUÍ)
     df = df[df["GRUPO"].isin(companias)]
 
+    # 🔧 IMPORTE CRÍTICO
+    df["Importe"] = (
+        df["Importe"]
+        .astype(str)
+        .str.replace("€", "", regex=False)
+        .str.replace(",", "", regex=False)
+    )
+
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+    df = df.dropna(subset=["Importe"])
 
    
 
-    #  Suma por GRUPO y MES
+
+
+    # 📊 groupby seguro
     df_resultado = (
-    df.groupby([ "GRUPO","MES"])["Importe"]
-    .sum()
-    .reset_index()
+        df.groupby(["GRUPO", "MES"])["Importe"]
+        .sum()
+        .reset_index()
     )
 
     df_pivot = df_resultado.pivot_table(
@@ -349,15 +367,19 @@ def tabla_filtro_año(df_datos, companias, lista_anios):
 
     df = df_datos.copy()
 
-    # 🔧 limpiar AÑO
+    # 🔧 limpiar columnas clave
     df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
-    df = df.dropna(subset=["AÑO"])
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+
+    # 🧹 eliminar filas malas
+    df = df.dropna(subset=["AÑO", "Importe"])
+
     df["AÑO"] = df["AÑO"].astype(int)
 
     # 🔧 filtrar compañías
     df = df[df["GRUPO"].isin(companias)]
 
-    # 📊 pivot
+    # 📊 pivot seguro
     df_resultado = df.pivot_table(
         index="GRUPO",
         columns="AÑO",
@@ -365,19 +387,14 @@ def tabla_filtro_año(df_datos, companias, lista_anios):
         aggfunc="sum"
     )
 
-    # 🚀 FORZAR EXACTAMENTE LOS AÑOS QUE TE PASAN
+    # 🚀 forzar años
     df_resultado = df_resultado.reindex(columns=lista_anios, fill_value=0)
 
-    # 🔧 asegurar ceros
     df_resultado = df_resultado.fillna(0)
 
-    # 🔥 total por fila (sin incluir TOTAL)
+    # 🔥 totales
     df_resultado["TOTAL"] = df_resultado.sum(axis=1)
-
-    # 🔥 total por columna (solo años)
     df_resultado.loc["TOTAL"] = df_resultado.drop(columns=["TOTAL"]).sum()
-
-    # 🔥 esquina inferior derecha correcta
     df_resultado.loc["TOTAL", "TOTAL"] = df_resultado["TOTAL"].sum()
 
     return df_resultado
@@ -410,12 +427,21 @@ def busca_patrones_total(df_datos, lista_años):
 
 
 def suma_positivos_por_anio(df, lista_anios, lista_grupos):
+
+    df = df.copy()
+
+    # 🔧 CLAVE: convertir a número
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+
+    # 🔧 eliminar valores no válidos
+    df = df.dropna(subset=["Importe"])
+
     resultado = []
 
     for año in lista_anios:
         suma = df.loc[
-            (df["AÑO"] == año) & 
-            (df["Importe"] > 0) & 
+            (df["AÑO"] == año) &
+            (df["Importe"] > 0) &
             (df["GRUPO"].isin(lista_grupos)),
             "Importe"
         ].sum()
@@ -430,12 +456,21 @@ def suma_positivos_por_anio(df, lista_anios, lista_grupos):
 
 
 def suma_negativos_por_anio(df, lista_anios, lista_grupos):
+
+    df = df.copy()
+
+    # 🔧 convertir a numérico
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+
+    # 🔧 eliminar valores inválidos
+    df = df.dropna(subset=["Importe"])
+
     resultado = []
 
     for año in lista_anios:
         suma = df.loc[
-            (df["AÑO"] == año) & 
-            (df["Importe"] < 0) & 
+            (df["AÑO"] == año) &
+            (df["Importe"] < 0) &
             (df["GRUPO"].isin(lista_grupos)),
             "Importe"
         ].sum()
@@ -449,9 +484,21 @@ def suma_negativos_por_anio(df, lista_anios, lista_grupos):
 #**************************************suma valores positivos por meses
 #*****************************************************************
 
-
 def suma_positivos_por_anio_mes(df, lista_anios, lista_meses, lista_grupos):
-    
+
+    df = df.copy()
+
+    # 🔧 convertir tipos críticos
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+    df["MES"] = pd.to_numeric(df["MES"], errors="coerce")
+
+    # 🔧 eliminar filas inválidas
+    df = df.dropna(subset=["Importe", "AÑO", "MES"])
+
+    df["AÑO"] = df["AÑO"].astype(int)
+    df["MES"] = df["MES"].astype(int)
+
     # 🔹 filtrar
     df_filtrado = df[
         (df["AÑO"].isin(lista_anios)) &
@@ -469,14 +516,11 @@ def suma_positivos_por_anio_mes(df, lista_anios, lista_meses, lista_grupos):
     # 🔹 generar listas alineadas
     for año in sorted(lista_anios):
         for mes in sorted(lista_meses):
-            
-            valores.append(agrupado.get((año, mes), 0))
-            mes_int = int(mes)
-            etiquetas.append(f"{año}-{mes_int:02d}")
 
+            valores.append(agrupado.get((año, mes), 0))
+            etiquetas.append(f"{año}-{mes:02d}")
 
     return valores, etiquetas
-
 
 
 #*****************************************************************
@@ -488,7 +532,20 @@ def suma_positivos_por_anio_mes(df, lista_anios, lista_meses, lista_grupos):
 
 
 
-def suma_positivos_por_anio_mes2 (df, lista_anios, lista_meses, lista_grupos):
+def suma_positivos_por_anio_mes2(df, lista_anios, lista_meses, lista_grupos):
+
+    df = df.copy()
+
+    # 🔧 convertir tipos (CLAVE)
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+    df["MES"] = pd.to_numeric(df["MES"], errors="coerce")
+
+    # 🔧 eliminar valores inválidos
+    df = df.dropna(subset=["Importe", "AÑO", "MES"])
+
+    df["AÑO"] = df["AÑO"].astype(int)
+    df["MES"] = df["MES"].astype(int)
 
     # 🔹 filtrar datos
     df_filtrado = df[
@@ -496,20 +553,20 @@ def suma_positivos_por_anio_mes2 (df, lista_anios, lista_meses, lista_grupos):
         (df["MES"].isin(lista_meses)) &
         (df["GRUPO"].isin(lista_grupos)) &
         (df["Importe"] > 0)
-        ]
+    ]
 
-    # 🔹 agrupar por MES y AÑO
+    # 🔹 agrupar (MES, AÑO)
     agrupado = df_filtrado.groupby(["MES", "AÑO"])["Importe"].sum()
 
     valores = []
     etiquetas = []
 
-    # 🔹 orden: primero meses, dentro años
+    # 🔹 orden: meses → años
     for mes in sorted(lista_meses):
         for año in sorted(lista_anios):
 
             valores.append(agrupado.get((mes, año), 0))
-            etiquetas.append(f"{mes:02d}-{año}")  # 01-2020, 02-2020...
+            etiquetas.append(f"{mes:02d}-{año}")
 
     return valores, etiquetas
 
@@ -520,13 +577,26 @@ def suma_positivos_por_anio_mes2 (df, lista_anios, lista_meses, lista_grupos):
 
 
 def suma_negativos_por_anio_mes(df, lista_anios, lista_meses, lista_grupos):
-    
+
+    df = df.copy()
+
+    # 🔧 convertir tipos (CLAVE)
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+    df["MES"] = pd.to_numeric(df["MES"], errors="coerce")
+
+    # 🔧 limpiar nulos
+    df = df.dropna(subset=["Importe", "AÑO", "MES"])
+
+    df["AÑO"] = df["AÑO"].astype(int)
+    df["MES"] = df["MES"].astype(int)
+
     # 🔹 filtrar
     df_filtrado = df[
         (df["AÑO"].isin(lista_anios)) &
         (df["MES"].isin(lista_meses)) &
         (df["GRUPO"].isin(lista_grupos)) &
-        (df["Importe"] <0)
+        (df["Importe"] < 0)
     ]
 
     # 🔹 agrupar
@@ -538,11 +608,9 @@ def suma_negativos_por_anio_mes(df, lista_anios, lista_meses, lista_grupos):
     # 🔹 generar listas alineadas
     for año in sorted(lista_anios):
         for mes in sorted(lista_meses):
-            
-            valores.append(agrupado.get((año, mes), 0))
-            mes_int = int(mes)
-            etiquetas.append(f"{año}-{mes_int:02d}")
 
+            valores.append(agrupado.get((año, mes), 0))
+            etiquetas.append(f"{año}-{mes:02d}")
 
     return valores, etiquetas
 
@@ -557,7 +625,19 @@ def suma_negativos_por_anio_mes(df, lista_anios, lista_meses, lista_grupos):
 
 
 
-def suma_negativos_por_anio_mes2 (df, lista_anios, lista_meses, lista_grupos):
+def suma_negativos_por_anio_mes2(df, lista_anios, lista_meses, lista_grupos):
+
+    df = df.copy()
+
+    # 🔧 limpieza obligatoria
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+    df["MES"] = pd.to_numeric(df["MES"], errors="coerce")
+
+    df = df.dropna(subset=["Importe", "AÑO", "MES"])
+
+    df["AÑO"] = df["AÑO"].astype(int)
+    df["MES"] = df["MES"].astype(int)
 
     # 🔹 filtrar datos
     df_filtrado = df[
@@ -565,20 +645,18 @@ def suma_negativos_por_anio_mes2 (df, lista_anios, lista_meses, lista_grupos):
         (df["MES"].isin(lista_meses)) &
         (df["GRUPO"].isin(lista_grupos)) &
         (df["Importe"] < 0)
-        ]
+    ]
 
-    # 🔹 agrupar por MES y AÑO
+    # 🔹 agrupar MES-AÑO
     agrupado = df_filtrado.groupby(["MES", "AÑO"])["Importe"].sum()
 
     valores = []
     etiquetas = []
 
-    # 🔹 orden: primero meses, dentro años
     for mes in sorted(lista_meses):
         for año in sorted(lista_anios):
-
             valores.append(agrupado.get((mes, año), 0))
-            etiquetas.append(f"{mes:02d}-{año}")  # 01-2020, 02-2020...
+            etiquetas.append(f"{mes:02d}-{año}")
 
     return valores, etiquetas
 
@@ -589,12 +667,24 @@ def suma_negativos_por_anio_mes2 (df, lista_anios, lista_meses, lista_grupos):
 
 
 def suma_positivos_por_año_grupo(df, lista_anios, lista_grupos):
+
+    df = df.copy()
+
+    # 🔧 convertir a numérico (CLAVE)
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+
+    # 🔧 eliminar valores inválidos
+    df = df.dropna(subset=["Importe", "AÑO"])
+
+    df["AÑO"] = df["AÑO"].astype(int)
+
     resultado = []
 
     for año in lista_anios:
         suma = df.loc[
-            (df["AÑO"] == año) & 
-            (df["Importe"] > 0) & 
+            (df["AÑO"] == año) &
+            (df["Importe"] > 0) &
             (df["GRUPO"].isin(lista_grupos)),
             "Importe"
         ].sum()
@@ -611,12 +701,24 @@ def suma_positivos_por_año_grupo(df, lista_anios, lista_grupos):
 
 
 def suma_negativos_por_año_grupo(df, lista_anios, lista_grupos):
+
+    df = df.copy()
+
+    # 🔧 convertir a numérico (OBLIGATORIO)
+    df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
+    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+
+    # 🔧 limpiar valores inválidos
+    df = df.dropna(subset=["Importe", "AÑO"])
+
+    df["AÑO"] = df["AÑO"].astype(int)
+
     resultado = []
 
     for año in lista_anios:
         suma = df.loc[
-            (df["AÑO"] == año) & 
-            (df["Importe"] < 0) & 
+            (df["AÑO"] == año) &
+            (df["Importe"] < 0) &
             (df["GRUPO"].isin(lista_grupos)),
             "Importe"
         ].sum()

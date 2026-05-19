@@ -4,6 +4,11 @@ import datetime
 from styles.estilos import aplicar_estilos,h3_especial,h2_especial
 import utils.funciones as ut
 
+import sys
+
+print("Python OK", file=sys.stderr)
+
+
 aplicar_estilos()
 
 
@@ -88,12 +93,8 @@ if (
     st.write("")
     st.write("")    
     anios = list(range(rango_años[0], rango_años[1] + 1))
-
-
-
-
-
-
+   
+ 
 
 
 
@@ -128,6 +129,9 @@ if (
         h2_especial("Compañias","white")
         datos_filtrados= ut.tabla_filtro_año(df_datos, companias,anios) 
         
+
+
+
         ultima_fila1 = datos_filtrados.iloc[-1].tolist()
         ut.mostrar_tabla(datos_filtrados)
 
