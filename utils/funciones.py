@@ -362,16 +362,26 @@ def elementos_no_incluidos(lista1, lista2):
 #*****************************************************************
 
 
-
 def tabla_filtro_año(df_datos, companias, lista_anios):
 
     df = df_datos.copy()
 
-    # 🔧 limpiar columnas clave
-    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+    # 🔧 LIMPIEZA FUERTE DE IMPORTE
+    df["Importe"] = (
+        df["Importe"]
+        .astype(str)
+        .str.replace("€", "", regex=False)
+        .str.replace(" ", "", regex=False)
+        .str.replace(".", "", regex=False)   # miles
+        .str.replace(",", ".", regex=False)  # decimal
+    )
+
     df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
 
-    # 🧹 eliminar filas malas
+    # 🔧 limpiar año
+    df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
+
+    # 🧹 eliminar basura
     df = df.dropna(subset=["AÑO", "Importe"])
 
     df["AÑO"] = df["AÑO"].astype(int)
@@ -387,7 +397,7 @@ def tabla_filtro_año(df_datos, companias, lista_anios):
         aggfunc="sum"
     )
 
-    # 🚀 forzar años
+    # 🚀 asegurar columnas
     df_resultado = df_resultado.reindex(columns=lista_anios, fill_value=0)
 
     df_resultado = df_resultado.fillna(0)
@@ -398,8 +408,6 @@ def tabla_filtro_año(df_datos, companias, lista_anios):
     df_resultado.loc["TOTAL", "TOTAL"] = df_resultado["TOTAL"].sum()
 
     return df_resultado
-
-
 
 
 #*****************************************************************
