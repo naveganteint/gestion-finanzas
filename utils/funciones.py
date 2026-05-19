@@ -366,23 +366,12 @@ def tabla_filtro_año(df_datos, companias, lista_anios):
 
     df = df_datos.copy()
 
-    # 🔧 LIMPIEZA FUERTE DE IMPORTE
-    df["Importe"] = (
-        df["Importe"]
-        .astype(str)
-        .str.replace("€", "", regex=False)
-        .str.replace(" ", "", regex=False)
-        .str.replace(".", "", regex=False)   # miles
-        .str.replace(",", ".", regex=False)  # decimal
-    )
-
+    # 🔧 limpieza simple (SUFICIENTE en tu caso)
     df["Importe"] = pd.to_numeric(df["Importe"], errors="coerce")
-
-    # 🔧 limpiar año
     df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
 
-    # 🧹 eliminar basura
-    df = df.dropna(subset=["AÑO", "Importe"])
+    # 🧹 eliminar basura (CLAVE)
+    df = df.dropna(subset=["Importe", "AÑO"])
 
     df["AÑO"] = df["AÑO"].astype(int)
 
