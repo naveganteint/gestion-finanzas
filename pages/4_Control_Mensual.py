@@ -129,7 +129,7 @@ if (
         h2_especial("Local","white") 
         datos_filtrados= ut.tabla_filtro(df_datos, anio_seleccionado, local) 
         ultima_fila6 = datos_filtrados.iloc[-1]
-        ut.mostrar_tabla(datos_filtrados,"#ffe6e6","tabla_2")
+        ut.mostrar_tabla(datos_filtrados,"#ffe6ff","tabla_2")
 
 
         h2_especial("Total Gastos","#ffb3b3")  
@@ -155,7 +155,8 @@ if (
         patrones_año= ut.busca_patrones_año(df_datos, anio_seleccionado)
         patrones=ut.recopila_patrones(df_patrones)
 
-       
+     
+
         patrones_no_incluidos=ut.elementos_no_incluidos(patrones_año, patrones)
         st.write("")
         st.markdown(

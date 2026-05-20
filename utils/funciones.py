@@ -4,16 +4,7 @@ import streamlit as st
 def tabla_filtro(df_datos, anio_seleccionado, companias):
 
     df = df_datos.copy()
- 
-
-
-
-
-
-
-
-
-
+    df["GRUPO"] = (df["GRUPO"].astype(str).str.strip())
 
     # 🧹 limpiar columnas innecesarias
     df = df.drop(columns=["F.Valor", "Disponible", "Observaciones", "Movimiento"])
@@ -310,6 +301,11 @@ def busca_patrones_año(df_datos, anio_seleccionado):
 
     df = df_datos.copy()
 
+    df["GRUPO"] = (
+    df["GRUPO"]
+    .astype(str)
+    .str.strip())
+
     # 🔧 asegurar tipo numérico en AÑO
     df["AÑO"] = pd.to_numeric(df["AÑO"], errors="coerce")
 
@@ -351,6 +347,7 @@ def elementos_no_incluidos(lista1, lista2):
     """
     Devuelve los elementos de lista1 que NO están en lista2.
     """
+
 
     set2 = set(lista2)
 
